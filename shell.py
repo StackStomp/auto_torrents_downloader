@@ -8,7 +8,6 @@ options:
   -p DIRECTORY     the path download torronts to
   -c CONFIG        the path to config file
   -d               daemon mode
-  -a ADDRESS       rss feed address
   -b DIRECTORY     the database directory
 '''
 
@@ -31,6 +30,15 @@ def check_config(config):
         print("No rss feed's address found")
         print_help()
         sys.exit(1)
+    for rss in config['rss']:
+        if not rss.has_key('address'):
+            print("The rss configuration need an address")
+            print(rss)
+            sys.exit(1)
+        if not rss.has_key('parser'):
+            print("The rss configuration need a parser")
+            print(rss)
+            sys.exit(1)
     #-b
     if not config.has_key('db'):
         print("No database path specified")
@@ -41,29 +49,37 @@ def get_config_fromjson(config, fdir):
     import json
     with open(fdir,'rb') as f:
         cf = json.load(f)
-    if cf.has_key('p'):
-        config['tdir'] = cf['p']
-    if cf.has_key('d'):
-        if cf['d'] != 0:
+    if cf.has_key('torrent-dir'):
+        config['tdir'] = cf['torrent-dir']
+    if cf.has_key('daemon'):
+        if cf['daemon'] != 0:
             config['daemon'] = True
-    if cf.has_key('a'):
-        if type(cf['a']) == list:
+    if cf.has_key('rss'):
+        if type(cf['rss']) == list:
             if config.has_key('rss'):
-                config['rss'] += cf['a']
+                config['rss'] += cf['rss']
             else:
-                config['rss'] = cf['a']
+                config['rss'] = cf['rss']
+        elif type(cf['rss']) == dict:
+            if config.has_key('rss'):
+                config['rss'].append(cf['rss'])
+            else:
+                config['rss'] = [cf['rss']]
         else:
-            if config.has_key('rss'):
-                config['rss'].append(cf['a'])
-            else:
-                config['rss'] = [cf['a']]
-    if cf.has_key('b'):
-        config['db'] = os.path.abspath(cf['b'])
+            print("Unexpected rss info")
+            print_help()
+            sys.exit(1)
+    if cf.has_key('db-dir'):
+        config['db'] = os.path.abspath(cf['db-dir'])
     return config
     
 def get_config():
-    config = {'daemon':False, 'time':60}
-    shortopts = 'p:c:da:b:'
+    config = {'daemon':False, 
+              'time':60, 
+              'db':os.path.abspath('atd.db'),
+              'flush':True,
+              'maxtry':10}
+    shortopts = 'p:c:db:'
     try:
         optlist, args = getopt.getopt(sys.argv[1:], shortopts)
     except getopt.GetoptError as e:
@@ -78,47 +94,35 @@ def get_config():
             config = get_config_fromjson(config, value)
         elif key == '-d':
             config['daemon'] = True
-        elif key == '-a':
-            if config.has_key('rss'):
-                config['rss'].append(value)
-            else:
-                config['rss'] = [value]
         elif key =='-b':
             config['db'] = os.path.abspath(value)
 
+    if os.path.isdir(config['db']):
+        config['db'] = os.path.join(config['db'], 'atd.db')
+
     check_config(config)
 
-    #remove duplicates
+    #remove duplicates and import 
     new_rss = []
-    for addr in config['rss']:
-        if not addr in new_rss:
-            new_rss.append(addr)
+    for rss in config['rss']:
+        for nr in new_rss:
+            if nr['address'] == rss['address']:
+                break
+        else:
+            rss['p'] = __import__(rss['parser'])
+            new_rss.append(rss)
     config['rss'] = new_rss
-
+    
     return config
 
 if __name__ == '__main__':
     print("Begin ut...")
-    print("    Test normal arguments...")
-    sys.argv = ['asd.py', '-p', '/home', 
-                '-a', 'http://hello.com', 
-                '-a', 'http://hello.cn',
-                '-a', 'http://hello.com',
-                '-b', '/home/test.db']
-    cfg = get_config()
-    assert cfg['tdir'] == '/home'
-    assert 'http://hello.com' in cfg['rss']
-    assert 'http://hello.cn' in cfg['rss']
-    assert len(cfg['rss']) == 2
-    assert cfg['daemon'] == False
-    assert cfg['db'] == '/home/test.db'
-
     print("    Test config file...")
     sys.argv = ['asd.py', '-c', 'cfg.json']
     cfg = get_config()
     assert cfg['tdir'] == '/home'
-    assert 'http://test1.com' in cfg['rss']
-    assert 'http://test2.com' in cfg['rss']
+    assert 'http://test1.com' == cfg['rss'][0]['address']
+    assert 'http://test2.com' == cfg['rss'][1]['address']
     assert len(cfg['rss']) == 2
     assert cfg['daemon']
     assert cfg['db'] == '/home/test1.db'
@@ -127,6 +131,7 @@ if __name__ == '__main__':
     sys.argv = ['asd.py', '-c', 'cfg1.json']
     cfg = get_config()
     assert cfg['tdir'] == '/home'
-    assert 'http://test1.com' in cfg['rss']
+    assert 'http://test1.com' == cfg['rss'][0]['address']
     assert len(cfg['rss']) == 1
     assert cfg['daemon']
+    assert cfg['db'] == '/home/atd.db'
