@@ -5,13 +5,12 @@ import shell
 import local
 import hashlib
 import torrent
+import daemon
 
 opt = shell.get_config()
 
 if opt['daemon']:
-    print "Start daemon...",
-    #TODO start daemon
-    print "Done"
+    daemon.daemon_exec(opt)
 
 print("Configuration:")
 for key in opt:
@@ -60,49 +59,62 @@ def download_torrent(url):
         return None
     return u.read()
 
-#Add new torrents' addresses to db
-for rss in opt['rss']:
-    feeddata = get_feed_data(rss['address'])
-    feedtitle = rss['p'].get_title(feeddata)
-    tlist = rss['p'].get_torrents_list(feeddata)
+def download():
+    #Add new torrents' addresses to db
+    for rss in opt['rss']:
+        feeddata = get_feed_data(rss['address'])
+        feedtitle = rss['p'].get_title(feeddata)
+        tlist = rss['p'].get_torrents_list(feeddata)
+        for taddr in tlist:
+            if db.has_byurl(taddr):
+                continue
+            print("Add new torrent to db, address %s" % taddr)
+            db.add(taddr)
+    
+    #Download torrents undownloaded
+    tlist = db.get_undown()
     for taddr in tlist:
-        if db.has_byurl(taddr):
+        print "Begin to download torrent from", taddr
+        if db.get_trydowntimes_byurl(taddr) >= opt['maxtry']:
             continue
-        print("Add new torrent to db, address %s" % taddr)
-        db.add(taddr)
+        db.plustrydowntimes_byurl(taddr)
+    
+        tdata = download_torrent(taddr)
+        if not tdata:
+            print("Can not get data fro address %s"%taddr)
+            continue
+    
+        tname = torrent.get_name(tdata)
+        if not tname:
+            print("Invalid torrent data")
+            continue
+    
+        if type(feedtitle) != type(tname):
+            #We convert to the same encoding, because:
+            #http://jerrypeng.me/2012/03/python-unicode-format-pitfall/
+            if type(feedtitle) == str:
+                feedtitle = feedtitle.decode('utf-8')
+            if type(tname) == str:
+                tname = tname.decode('utf-8')
+        tfname ="[%s] %s.torrent" %(feedtitle, tname)
+    
+        md5 = hashlib.md5(tdata).hexdigest()
+    
+        print "Torrent file has been downloaded, name", tfname
+        with open(os.path.join(opt['tdir'], tfname), 'w') as f:
+            f.write(tdata)
+        db.set_name(taddr, tname)
+        db.set_md5(taddr, md5)
+        db.set_downloaded(taddr)
 
-#Download torrents undownloaded
-tlist = db.get_undown()
-for taddr in tlist:
-    print "Begin to download torrent from", taddr
-    if db.get_trydowntimes_byurl(taddr) >= opt['maxtry']:
-        continue
-    db.plustrydowntimes_byurl(taddr)
+if not opt['daemon']:
+    import sys
+    download()
+    print "hello"
+    sys.exit(0)
 
-    tdata = download_torrent(taddr)
-    if not tdata:
-        print("Can not get data fro address %s"%taddr)
-        continue
+while True:
+    import time
+    dowanload()
+    time.sleep(opt['time'])
 
-    tname = torrent.get_name(tdata)
-    if not tname:
-        print("Invalid torrent data")
-        continue
-
-    if type(feedtitle) != type(tname):
-        #We convert to the same encoding, because:
-        #http://jerrypeng.me/2012/03/python-unicode-format-pitfall/
-        if type(feedtitle) == str:
-            feedtitle = feedtitle.decode('utf-8')
-        if type(tname) == str:
-            tname = tname.decode('utf-8')
-    tfname ="[%s] %s.torrent" %(feedtitle, tname)
-
-    md5 = hashlib.md5(tdata).hexdigest()
-
-    print "Torrent file has been downloaded, name", tfname
-    with open(os.path.join(opt['tdir'], tfname), 'w') as f:
-        f.write(tdata)
-    db.set_name(taddr, tname)
-    db.set_md5(taddr, md5)
-    db.set_downloaded(taddr)

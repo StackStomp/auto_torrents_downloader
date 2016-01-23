@@ -7,7 +7,7 @@ atd OPTIONS...
 options:
   -p DIRECTORY     the path download torronts to
   -c CONFIG        the path to config file
-  -d               daemon mode
+  -d COMMAND       daemon mode start/stop/restart
   -b DIRECTORY     the database directory
 '''
 
@@ -15,7 +15,18 @@ def print_help():
     print(help_info)
 
 def check_config(config):
-    #-c,-d no need to check
+    #-c no need to check
+    #-d
+    if config['daemon']:
+        if not config['daemon'] in \
+            ('start','stop','restart'):
+            print("Daemon command must be start, stop or restart")
+            print_help()
+            sys.exit(1)
+        if config['daemon'] in ('stop','restart'):
+            if not os.path.isfile(config['pid-file']):
+                print("The pid file is not exists")
+                print_help()
     #-p
     if not config.has_key('tdir'):
         print("Need torrents' directory")
@@ -51,9 +62,6 @@ def get_config_fromjson(config, fdir):
         cf = json.load(f)
     if cf.has_key('torrent-dir'):
         config['tdir'] = os.path.abspath(cf['torrent-dir'])
-    if cf.has_key('daemon'):
-        if cf['daemon'] != 0:
-            config['daemon'] = True
     if cf.has_key('rss'):
         if type(cf['rss']) == list:
             if config.has_key('rss'):
@@ -74,12 +82,14 @@ def get_config_fromjson(config, fdir):
     return config
     
 def get_config():
-    config = {'daemon':False, 
-              'time':60, 
+    config = {'daemon':None, 
+              'time':300, 
               'db':os.path.abspath('atd.db'),
+              'log-file':os.path.abspath('atdownloader.log'),
+              'pid-file':os.path.abspath('atdownloader.pid'),
               'flush':True,
               'maxtry':10}
-    shortopts = 'p:c:db:'
+    shortopts = 'p:c:d:b:'
     try:
         optlist, args = getopt.getopt(sys.argv[1:], shortopts)
     except getopt.GetoptError as e:
@@ -93,12 +103,16 @@ def get_config():
         elif key == '-c':
             config = get_config_fromjson(config, value)
         elif key == '-d':
-            config['daemon'] = True
+            config['daemon'] = value
         elif key =='-b':
             config['db'] = os.path.abspath(value)
 
     if os.path.isdir(config['db']):
         config['db'] = os.path.join(config['db'], 'atd.db')
+    dbdir, dbname = os.path.split(config['db'])
+    if dbdir != config['log-file']:
+        config['log-file'] = os.path.join(dbdir, 'atdownloader.log')
+        config['pid-file'] = os.path.join(dbdir, 'atdownloader.pid')
 
     check_config(config)
 
@@ -124,14 +138,18 @@ if __name__ == '__main__':
     assert 'http://test1.com' == cfg['rss'][0]['address']
     assert 'http://test2.com' == cfg['rss'][1]['address']
     assert len(cfg['rss']) == 2
-    assert cfg['daemon']
+    assert cfg['daemon'] == None
     assert cfg['db'] == '/home/test1.db'
+    assert cfg['log-file'] == '/home/atdownloader.log'
+    assert cfg['pid-file'] == '/home/atdownloader.pid'
 
     print("    Test cfg1.json...")
-    sys.argv = ['asd.py', '-c', 'cfg1.json']
+    sys.argv = ['asd.py', '-c', 'cfg1.json', '-d', 'start']
     cfg = get_config()
     assert cfg['tdir'] == '/home'
     assert 'http://test1.com' == cfg['rss'][0]['address']
     assert len(cfg['rss']) == 1
-    assert cfg['daemon']
+    assert cfg['daemon'] == 'start'
     assert cfg['db'] == '/home/atd.db'
+    assert cfg['log-file'] == '/home/atdownloader.log'
+    assert cfg['pid-file'] == '/home/atdownloader.pid'
