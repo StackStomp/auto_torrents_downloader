@@ -5,7 +5,7 @@ class LocalTorrents:
         self.db = sqlite3.connect(db)
         c = self.db.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS torrents \
-            (url text, md5 text, name text, downloaded integer)")
+            (url text, md5 text, name text, trydown integer, downloaded integer)")
     def __del__(self):
         if self.db:
             self.close()
@@ -15,10 +15,14 @@ class LocalTorrents:
         self.db.close()
         self.db = None
 
+    def add_exists(self, name, md5):
+        c = self.db.cursor()
+        c.execute("INSERT INTO torrents (md5, name, downloaded) VALUES (?,?,1)", \
+            (md5, name))
     def add(self, tor_url):
         c = self.db.cursor()
-        c.execute("INSERT INTO torrents (url, downloaded) VALUES (?,?)", \
-            (tor_url, 0))
+        c.execute("INSERT INTO torrents (url, trydown, downloaded) VALUES (?,0,0)", \
+            (tor_url,))
     def has_byurl(self, tor_url):
         c = self.db.cursor()
         c.execute("SELECT * FROM torrents WHERE url = (?)",(tor_url,))
@@ -26,6 +30,23 @@ class LocalTorrents:
             return True
         else:
             return False
+
+    def get_trydowntimes_byurl(self, tor_url):
+        c = self.db.cursor()
+        c.execute("SELECT trydown FROM torrents WHERE url = (?)",(tor_url,))
+        times = c.fetchall()
+        if times:
+            times = int(times[0][0])
+        return times
+    def plustrydowntimes_byurl(self, tor_url):
+        c = self.db.cursor()
+        c.execute("SELECT trydown FROM torrents WHERE url = (?)",(tor_url,))
+        times = c.fetchall()
+        if not times:
+            raise Exception("Can not find the torrent by url %s" %tor_url)
+        times = int(times[0][0])
+        c.execute("UPDATE torrents SET trydown = (?) WHERE url = (?)", \
+                (times+1,tor_url))
 
     def set_name(self, tor_url, name):
         c = self.db.cursor()
@@ -85,6 +106,15 @@ if __name__ == '__main__':
         else:
             assert not l.has_byurl(ba+str(i))
 
+    print "    Test update try down times"
+    for i in range(1,11):
+        t = l.get_trydowntimes_byurl(ba+str(i))
+        assert t == 0
+        l.plustrydowntimes_byurl(ba+str(i))
+    for i in range(1,11):
+        t = l.get_trydowntimes_byurl(ba+str(i))
+        assert t == 1
+
     print "    Test setting downloaded..."
     for i in range(1,6):
         l.set_downloaded(ba+str(i))
@@ -116,4 +146,13 @@ if __name__ == '__main__':
         else:
             assert l.has_byname(bn+str(i)+".torrent")
 
+    print "    Test adding exists..."
+    prev_undown = l.get_undown()
+    for i in range(11,21):
+        l.add_exists(bn+str(i)+".torrent", bm+str(i))
+    undown = l.get_undown()
+    assert len(prev_undown) == len(undown)
+    for  i in range(11,21):
+        assert l.has_byname(bn+str(i)+".torrent")
+        assert l.has_bymd5(bm+str(i))
     l.close()
