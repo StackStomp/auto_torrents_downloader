@@ -115,6 +115,6 @@ if not opt['daemon']:
 
 while True:
     import time
-    dowanload()
+    download()
     time.sleep(opt['time'])
 
