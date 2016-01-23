@@ -1,0 +1,10 @@
+{
+    "torrent-dir":"The directory you want to download torrents to",
+    "daemon":1,
+    "rss":[
+    {
+        "address":"Your rss http address", 
+        "parser":"ttg"
+    }
+    ]
+}
