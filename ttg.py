@@ -1,6 +1,7 @@
 import feedparser
 
 addr = 'totheglory.im'
+head = '[TTG]'
 
 def get_torrents_list(up):
     #u = urllib.urlopen(addr)
@@ -21,7 +22,6 @@ def get_title(up):
     if not up['feed'].has_key('title'):
         return None
     return up['feed']['title']
-
 
 if __name__ == '__main__':
     print "Unit test..."
