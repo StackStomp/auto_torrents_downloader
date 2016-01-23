@@ -50,7 +50,7 @@ def get_config_fromjson(config, fdir):
     with open(fdir,'rb') as f:
         cf = json.load(f)
     if cf.has_key('torrent-dir'):
-        config['tdir'] = cf['torrent-dir']
+        config['tdir'] = os.path.abspath(cf['torrent-dir'])
     if cf.has_key('daemon'):
         if cf['daemon'] != 0:
             config['daemon'] = True
@@ -89,7 +89,7 @@ def get_config():
 
     for key, value in optlist:
         if key == '-p':
-            config['tdir'] = value
+            config['tdir'] = os.path.abspath(value)
         elif key == '-c':
             config = get_config_fromjson(config, value)
         elif key == '-d':
