@@ -84,6 +84,8 @@ def get_config_fromjson(config, fdir):
 def get_config():
     config = {'daemon':None, 
               'time':300, 
+              'feedurl-timeout':30,
+              'torurl-timeout':60,
               'db':os.path.abspath('atd.db'),
               'log-file':os.path.abspath('atdownloader.log'),
               'pid-file':os.path.abspath('atdownloader.pid'),

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import os
-import urllib
+import urllib2
 import shell
 import local
 import hashlib
@@ -38,31 +38,39 @@ if opt['flush']:
 #            pass
         print("Added exists torrent file %s, md5 %s" \
                 % (tname, md5))
-##just for test
-#c = db.db.cursor()
-#c.execute("SELECT * FROM torrents")
-#for e in c.fetchall():
-#    print e
 
-#read in rss feed and download torrents
-def get_feed_data(url):
+def get_feed_data(url, timeout):
     import feedparser
-    u = urllib.urlopen(url)
+    try:
+        u = urllib2.urlopen(url, timeout=timeout)
+    except urllib2.URLError:
+        print("Failed to open url %s, timeout %d, timeout maybe" % (url, timeout))
+        return None
     uc = u.read()
     u.close()
     return feedparser.parse(uc)
 
-def download_torrent(url):
+def download_torrent(url, timeout):
     try:
-        u = urllib.urlopen(url)
+        u = urllib2.urlopen(url, timeout=timeout)
     except IOError:
+        print("Failed to download torrent from %s, invalid url" % url)
         return None
-    return u.read()
+    except urllib2.URLError:
+        print("Failed to download torrent from %s, timeout %d, timeout maybe" \
+            % (url, timeout))
+        return None
+    uc = u.read()
+    u.close()
+    return uc
 
 def download():
     #Add new torrents' addresses to db
     for rss in opt['rss']:
-        feeddata = get_feed_data(rss['address'])
+        feeddata = get_feed_data(rss['address'], opt['feedurl-timeout'])
+        if not feeddata:
+            print("Failed to get feed data from %s" % rss['address'])
+            continue
         feedtitle = rss['p'].get_title(feeddata)
         tlist = rss['p'].get_torrents_list(feeddata)
         for taddr in tlist:
@@ -79,7 +87,7 @@ def download():
             continue
         db.plustrydowntimes_byurl(taddr)
     
-        tdata = download_torrent(taddr)
+        tdata = download_torrent(taddr, opt['torurl-timeout'])
         if not tdata:
             print("Can not get data fro address %s"%taddr)
             continue
