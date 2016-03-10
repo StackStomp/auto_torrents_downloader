@@ -6,21 +6,42 @@ import local
 import hashlib
 import torrent
 import daemon
+import logging
+
+# create logger
+logger = logging.getLogger('td')
+logger.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+# 'application' code
+logger.debug('logger ok')
+#logger.info('info message')
+#logger.warn('warn message')
+#logger.error('error message')
+#logger.critical('critical message')
 
 opt = shell.get_config()
 
 if opt['daemon']:
     daemon.daemon_exec(opt)
 
-print("Configuration:")
+logger.info("Configuration:")
 for key in opt:
-    print("%s:%s"%(key,opt[key]))
+    logger.info("%s:%s"%(key,opt[key]))
     
 db = local.LocalTorrents(opt['db'])
 
 #read in all torrents exists to the db
 if opt['flush']:
-    print("Scan dir %s, and record torrents..." % opt['tdir'])
+    logger.info("Scan dir %s, and record torrents..." % opt['tdir'])
     for f in os.listdir(opt['tdir']):
         fullf = os.path.join(opt['tdir'], f)
         if not os.path.isfile(fullf):
@@ -36,7 +57,7 @@ if opt['flush']:
 #            tname = tname.encode('utf-8')
 #        except UnicodeDecodeError:
 #            pass
-        print("Added exists torrent file %s, md5 %s" \
+        logger.info("Added exists torrent file %s, md5 %s" \
                 % (tname, md5))
 
 def get_feed_data(url, timeout):
@@ -44,7 +65,7 @@ def get_feed_data(url, timeout):
     try:
         u = urllib2.urlopen(url, timeout=timeout)
     except urllib2.URLError:
-        print("Failed to open url %s, timeout %d, timeout maybe" % (url, timeout))
+        logger.warn("Failed to open url %s, timeout %d, timeout maybe" % (url, timeout))
         return None
     uc = u.read()
     u.close()
@@ -54,10 +75,10 @@ def download_torrent(url, timeout):
     try:
         u = urllib2.urlopen(url, timeout=timeout)
     except IOError:
-        print("Failed to download torrent from %s, invalid url" % url)
+        logger.error("Failed to download torrent from %s, invalid url" % url)
         return None
     except urllib2.URLError:
-        print("Failed to download torrent from %s, timeout %d, timeout maybe" \
+        logger.warn("Failed to download torrent from %s, timeout %d, timeout maybe" \
             % (url, timeout))
         return None
     uc = u.read()
@@ -69,33 +90,33 @@ def download():
     for rss in opt['rss']:
         feeddata = get_feed_data(rss['address'], opt['feedurl-timeout'])
         if not feeddata:
-            print("Failed to get feed data from %s" % rss['address'])
+            logger.warn("Failed to get feed data from %s" % rss['address'])
             continue
         feedtitle = rss['p'].get_title(feeddata)
         tlist = rss['p'].get_torrents_list(feeddata)
         for taddr in tlist:
             if db.has_byurl(taddr):
-                print("New torrent exists, address %s" % taddr)
+                logger.debug("New torrent exists, address %s" % taddr)
                 continue
-            print("Add new torrent to db, address %s" % taddr)
+            logger.info("Add new torrent to db, address %s" % taddr)
             db.add(taddr)
     
     #Download torrents undownloaded
     tlist = db.get_undown()
     for taddr in tlist:
-        print "Begin to download torrent from", taddr
+        logger.info("Begin to download torrent from %s"% taddr)
         if db.get_trydowntimes_byurl(taddr) >= opt['maxtry']:
             continue
         db.plustrydowntimes_byurl(taddr)
     
         tdata = download_torrent(taddr, opt['torurl-timeout'])
         if not tdata:
-            print("Can not get data fro address %s"%taddr)
+            logger.warn("Can not get data fro address %s"%taddr)
             continue
     
         tname = torrent.get_name(tdata)
         if not tname:
-            print("Invalid torrent data")
+            logger.warn("Invalid torrent data")
             continue
     
         if type(feedtitle) != type(tname):
@@ -109,7 +130,7 @@ def download():
     
         md5 = hashlib.md5(tdata).hexdigest()
     
-        print "Torrent file has been downloaded, name", tfname
+        logger.info("Torrent file has been downloaded, name %s"%tfname)
         with open(os.path.join(opt['tdir'], tfname), 'w') as f:
             f.write(tdata)
         db.set_name(taddr, tname)
@@ -119,7 +140,7 @@ def download():
 if not opt['daemon']:
     import sys
     download()
-    print "hello"
+    logger.debug("Running in console mode")
     sys.exit(0)
 
 cnt = 0
@@ -127,7 +148,7 @@ while True:
     import time
     cnt += 1
     tm = time.gmtime()
-    print("Run %d times" % cnt)
+    logger.debug("Run %d times" % cnt)
     download()
     time.sleep(opt['time'])
 
