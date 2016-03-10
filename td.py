@@ -75,6 +75,7 @@ def download():
         tlist = rss['p'].get_torrents_list(feeddata)
         for taddr in tlist:
             if db.has_byurl(taddr):
+                print("New torrent exists, address %s" % taddr)
                 continue
             print("Add new torrent to db, address %s" % taddr)
             db.add(taddr)
@@ -121,8 +122,12 @@ if not opt['daemon']:
     print "hello"
     sys.exit(0)
 
+cnt = 0
 while True:
     import time
+    cnt += 1
+    tm = time.gmtime()
+    print("Run %d times" % cnt)
     download()
     time.sleep(opt['time'])
 
