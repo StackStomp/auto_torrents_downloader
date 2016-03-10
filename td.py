@@ -7,6 +7,8 @@ import hashlib
 import torrent
 import daemon
 import logging
+import feedparser
+import signal
 
 # create logger
 logger = logging.getLogger('td')
@@ -60,20 +62,32 @@ if opt['flush']:
         logger.info("Added exists torrent file %s, md5 %s" \
                 % (tname, md5))
 
+def timeout_handler(signum, frame):
+    raise urllib2.URLError("time out")
+signal.signal(signal.SIGALRM, timeout_handler)
+
 def get_feed_data(url, timeout):
-    import feedparser
+    signal.alarm(timeout)
     try:
-        u = urllib2.urlopen(url, timeout=timeout)
+        #can not use the argument timeout applied by urlopen
+        #because the timeout argument is 'defaulttimeout'
+        #but we need a whole-procedure-timeout
+        u = urllib2.urlopen(url)
+        uc = u.read()
+        u.close()
     except urllib2.URLError:
         logger.warn("Failed to open url %s, timeout %d, timeout maybe" % (url, timeout))
         return None
-    uc = u.read()
-    u.close()
+    signal.alarm(0)
+
     return feedparser.parse(uc)
 
 def download_torrent(url, timeout):
+    signal.alarm(timeout)
     try:
-        u = urllib2.urlopen(url, timeout=timeout)
+        u = urllib2.urlopen(url)
+        uc = u.read()
+        u.close()
     except IOError:
         logger.error("Failed to download torrent from %s, invalid url" % url)
         return None
@@ -81,8 +95,7 @@ def download_torrent(url, timeout):
         logger.warn("Failed to download torrent from %s, timeout %d, timeout maybe" \
             % (url, timeout))
         return None
-    uc = u.read()
-    u.close()
+    signal.alarm(0)
     return uc
 
 def download():
