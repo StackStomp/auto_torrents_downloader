@@ -15,6 +15,7 @@ def print_help():
     print(help_info)
 
 def check_config(config):
+    print config
     #-c no need to check
     #-d
     if config['daemon']:
@@ -60,25 +61,7 @@ def get_config_fromjson(config, fdir):
     import json
     with open(fdir,'rb') as f:
         cf = json.load(f)
-    if cf.has_key('torrent-dir'):
-        config['tdir'] = os.path.abspath(cf['torrent-dir'])
-    if cf.has_key('rss'):
-        if type(cf['rss']) == list:
-            if config.has_key('rss'):
-                config['rss'] += cf['rss']
-            else:
-                config['rss'] = cf['rss']
-        elif type(cf['rss']) == dict:
-            if config.has_key('rss'):
-                config['rss'].append(cf['rss'])
-            else:
-                config['rss'] = [cf['rss']]
-        else:
-            print("Unexpected rss info")
-            print_help()
-            sys.exit(1)
-    if cf.has_key('db-dir'):
-        config['db'] = os.path.abspath(cf['db-dir'])
+    config = dict(config, **cf)
     return config
     
 def get_config():
@@ -86,9 +69,6 @@ def get_config():
               'time':300, 
               'feedurl-timeout':30,
               'torurl-timeout':60,
-              'db':os.path.abspath('atd.db'),
-              'log-file':os.path.abspath('atdownloader.log'),
-              'pid-file':os.path.abspath('atdownloader.pid'),
               'flush':True,
               'maxtry':10}
     shortopts = 'p:c:d:b:'
@@ -109,12 +89,13 @@ def get_config():
         elif key =='-b':
             config['db'] = os.path.abspath(value)
 
-    if os.path.isdir(config['db']):
-        config['db'] = os.path.join(config['db'], 'atd.db')
-    dbdir, dbname = os.path.split(config['db'])
-    if dbdir != config['log-file']:
-        config['log-file'] = os.path.join(dbdir, 'atdownloader.log')
-        config['pid-file'] = os.path.join(dbdir, 'atdownloader.pid')
+    if not config.has_key('ctrl-dir'):
+        print("No ctrl-dir specified")
+        sys.exit(1)
+
+    config['db'] = os.path.join(config['ctrl-dir'], 'td.db')
+    config['log-file'] = os.path.join(config['ctrl-dir'], 'atdownloader.log')
+    config['pid-file'] = os.path.join(config['ctrl-dir'], 'atdownloader.pid')
 
     check_config(config)
 
