@@ -139,8 +139,8 @@ def download():
 
 if not opt['daemon']:
     import sys
-    download()
     logger.debug("Running in console mode")
+    download()
     sys.exit(0)
 
 cnt = 0
@@ -148,7 +148,7 @@ while True:
     import time
     cnt += 1
     tm = time.gmtime()
-    logger.debug("Run %d times" % cnt)
+    logger.debug("Run %d times, begin to download" % cnt)
     download()
     time.sleep(opt['time'])
 
