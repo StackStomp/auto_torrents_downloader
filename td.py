@@ -62,8 +62,11 @@ if opt['flush']:
         logger.info("Added exists torrent file %s, md5 %s" \
                 % (tname, md5))
 
+class TotalTimeout(Exception):
+    pass
+
 def timeout_handler(signum, frame):
-    raise urllib2.URLError("time out")
+    raise TotalTimeout("time out")
 signal.signal(signal.SIGALRM, timeout_handler)
 
 def get_feed_data(url, timeout):
@@ -75,8 +78,12 @@ def get_feed_data(url, timeout):
         u = urllib2.urlopen(url)
         uc = u.read()
         u.close()
-    except urllib2.URLError:
-        logger.warn("Failed to open url %s, timeout %d, timeout maybe" % (url, timeout))
+    except TotalTimeout:
+        logger.warn("Failed to open url %s, timeout %d" % (url, timeout))
+        return None
+    except urllib2.URLError, e:
+        signal.alarm(0)
+        logger.warn("Failed to open url %s because urllib2.URLError, info %s" % (url, e))
         return None
     signal.alarm(0)
 
@@ -91,9 +98,12 @@ def download_torrent(url, timeout):
     except IOError:
         logger.error("Failed to download torrent from %s, invalid url" % url)
         return None
-    except urllib2.URLError:
-        logger.warn("Failed to download torrent from %s, timeout %d, timeout maybe" \
-            % (url, timeout))
+    except TotalTimeout:
+        logger.warn("Failed to open url %s, timeout %d" % (url, timeout))
+        return None
+    except urllib2.URLError, e:
+        signal.alarm(0)
+        logger.warn("Failed to open url %s because urllib2.URLError, info %s" % (url, e))
         return None
     signal.alarm(0)
     return uc
