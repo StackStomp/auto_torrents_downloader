@@ -10,64 +10,11 @@ import logging
 import feedparser
 import signal
 
-# create logger
-logger = logging.getLogger('td')
-logger.setLevel(logging.DEBUG)
-
-# create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# create console handler and set level to debug
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(formatter)
-logger.addHandler(ch)
-
-# 'application' code
-logger.debug('logger ok')
-#logger.info('info message')
-#logger.warn('warn message')
-#logger.error('error message')
-#logger.critical('critical message')
-
-opt = shell.get_config()
-
-if opt['daemon']:
-    daemon.daemon_exec(opt)
-
-logger.info("Configuration:")
-for key in opt:
-    logger.info("%s:%s"%(key,opt[key]))
-    
-db = local.LocalTorrents(opt['db'])
-
-#read in all torrents exists to the db
-if opt['flush']:
-    logger.info("Scan dir %s, and record torrents..." % opt['tdir'])
-    for f in os.listdir(opt['tdir']):
-        fullf = os.path.join(opt['tdir'], f)
-        if not os.path.isfile(fullf):
-            continue
-        tname = torrent.get_tname_byfname(f)
-        if not tname:
-            continue
-        if db.has_byname(tname):
-            continue
-        md5 = hashlib.md5(open(fullf,'rb').read()).hexdigest()
-        db.add_exists(tname, md5)
-#        try:
-#            tname = tname.encode('utf-8')
-#        except UnicodeDecodeError:
-#            pass
-        logger.info("Added exists torrent file %s, md5 %s" \
-                % (tname, md5))
-
+#functions
 class TotalTimeout(Exception):
     pass
-
 def timeout_handler(signum, frame):
     raise TotalTimeout("time out")
-signal.signal(signal.SIGALRM, timeout_handler)
 
 def get_feed_data(url, timeout):
     signal.alarm(timeout)
@@ -160,12 +107,69 @@ def download():
         db.set_md5(taddr, md5)
         db.set_downloaded(taddr)
 
+# create logger
+logger = logging.getLogger('td')
+logger.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+# 'application' code
+logger.debug('logger ok')
+
+#get config
+opt = shell.get_config()
+
+#daemon operation
+if opt['daemon']:
+    daemon.daemon_exec(opt)
+
+#print configuration
+logger.info("Configuration:")
+for key in opt:
+    logger.info("%s:%s"%(key,opt[key]))
+    
+#init torrents' database
+db = local.LocalTorrents(opt['db'])
+
+#read in all torrents exists to the db
+if opt['flush']:
+    logger.info("Scan dir %s, and record torrents..." % opt['tdir'])
+    for f in os.listdir(opt['tdir']):
+        fullf = os.path.join(opt['tdir'], f)
+        if not os.path.isfile(fullf):
+            continue
+        tname = torrent.get_tname_byfname(f)
+        if not tname:
+            continue
+        if db.has_byname(tname):
+            continue
+        md5 = hashlib.md5(open(fullf,'rb').read()).hexdigest()
+        db.add_exists(tname, md5)
+#        try:
+#            tname = tname.encode('utf-8')
+#        except UnicodeDecodeError:
+#            pass
+        logger.info("Added exists torrent file %s, md5 %s" \
+                % (tname, md5))
+
+#handle the timeout alarm
+signal.signal(signal.SIGALRM, timeout_handler)
+
+#console mode, run only on time
 if not opt['daemon']:
     import sys
     logger.debug("Running in console mode")
     download()
     sys.exit(0)
 
+#daemon mode, run inifitely
 cnt = 0
 while True:
     import time
