@@ -3,3 +3,4 @@
 *.torrent
 *.swp
 *.json
+*_test.py
