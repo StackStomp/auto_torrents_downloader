@@ -49,7 +49,8 @@ class RSS(object):
             return None
         feedtitle = self.p.get_title(feeddata)
         tlist = self.p.get_torrents_list(feeddata)
-        return tlist
+        return tlist, feedtitle
+        
     
 def download_torrent(url, timeout, logger):
     signal.alarm(timeout)

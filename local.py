@@ -5,7 +5,9 @@ class LocalTorrents:
         self.db = sqlite3.connect(db)
         c = self.db.cursor()
         c.execute("CREATE TABLE IF NOT EXISTS torrents \
-            (url text, md5 text, name text, trydown integer, downloaded integer)")
+            (url text, md5 text, \
+             name text, trydown integer, \
+             downloaded integer, title text)")
     def __del__(self):
         if self.db:
             self.close()
@@ -60,6 +62,19 @@ class LocalTorrents:
         else:
             return False
 
+    def set_title(self, tor_url, title):
+        c = self.db.cursor()
+        c.execute("UPDATE torrents SET title = (?) WHERE url = (?)", \
+            (title, tor_url))
+    def get_title(self, tor_url):
+        c = self.db.cursor()
+        c.execute("SELECT title FROM torrents WHERE url = (?)", (tor_url,))
+        title = c.fetchall()
+        if len(title) > 0:
+            return title[0]
+        else:
+            return None
+
     def set_md5(self, tor_url, md5):
         c = self.db.cursor()
         c.execute("UPDATE torrents SET md5 = (?) WHERE url = (?)", \
@@ -78,12 +93,13 @@ class LocalTorrents:
             (tor_url,))
     def get_undown(self):
         c = self.db.cursor()
-        c.execute("SELECT url FROM torrents WHERE downloaded = 0")
+        c.execute("SELECT url,title FROM torrents WHERE downloaded = 0")
         r = c.fetchall()
-        if len(r) > 0:
-            return map(lambda x:x[0], [y for y in r])
-        else:
-            return []
+        undown_list = []
+        for tor in r:
+            undown_list.append({'url':tor[0], 'title':tor[1]})
+        return undown_list
+            
 
 if __name__ == '__main__':
     print "Begin to LocalTorrents ut..."

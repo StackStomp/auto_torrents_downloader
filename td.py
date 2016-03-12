@@ -11,7 +11,7 @@ import ptserver
 def download():
     #read the rss, and add new torrent-addresses to db
     for rss in rsss:
-        tlist = rss.get_torrents_list()
+        tlist, ttitle = rss.get_torrents_list()
         if not tlist:
             continue
         for taddr in tlist:
@@ -20,11 +20,14 @@ def download():
                 continue
             logger.info("Add new torrent to db, address %s" % taddr)
             db.add(taddr)
+            db.set_title(taddr, ttitle)
     
     #Download torrents undownloaded
     down_list = []
     tlist = db.get_undown()
-    for taddr in tlist:
+    for tor in tlist:
+        taddr = tor['url']
+        feedtitle = tor['title']
         logger.info("Begin to download torrent from %s"% taddr)
         if db.get_trydowntimes_byurl(taddr) >= opt['maxtry']:
             continue
