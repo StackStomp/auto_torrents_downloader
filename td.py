@@ -7,6 +7,7 @@ import torrent
 import daemon
 import logging
 import ptserver
+#import publisher
 
 def download():
     #read the rss, and add new torrent-addresses to db
@@ -19,8 +20,7 @@ def download():
                 logger.debug("New torrent exists, address %s" % taddr)
                 continue
             logger.info("Add new torrent to db, address %s" % taddr)
-            db.add(taddr)
-            db.set_title(taddr, ttitle)
+            db.add_undown(taddr, ttitle, rss.subscribers)
     
     #Download torrents undownloaded
     down_list = []
@@ -58,9 +58,7 @@ def download():
         down_list.append(tfname)
         with open(os.path.join(opt['tdir'], tfname), 'w') as f:
             f.write(tdata)
-        db.set_name(taddr, tname)
-        db.set_md5(taddr, md5)
-        db.set_downloaded(taddr)
+        db.set_downloaded(taddr, tname, md5)
 
     return down_list
 
