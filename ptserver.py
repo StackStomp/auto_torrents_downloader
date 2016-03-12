@@ -46,7 +46,7 @@ class RSS(object):
         feeddata = self.get_feed_data()
         if not feeddata:
             self.logger.warn("Failed to get feed data from %s" % self.url)
-            return None
+            return None, None
         feedtitle = self.p.get_title(feeddata)
         tlist = self.p.get_torrents_list(feeddata)
         return tlist, feedtitle
