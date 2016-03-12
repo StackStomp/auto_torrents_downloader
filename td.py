@@ -7,7 +7,7 @@ import torrent
 import daemon
 import logging
 import ptserver
-#import publisher
+import publisher
 
 def download():
     #read the rss, and add new torrent-addresses to db
@@ -23,7 +23,7 @@ def download():
             db.add_undown(taddr, ttitle, rss.subscribers)
     
     #Download torrents undownloaded
-    down_list = []
+    publish_task = {}
     tlist = db.get_undown()
     for tor in tlist:
         taddr = tor['url']
@@ -55,12 +55,17 @@ def download():
         md5 = hashlib.md5(tdata).hexdigest()
     
         logger.info("Torrent file has been downloaded, name %s"%tfname)
-        down_list.append(tfname)
+        subscriber_list = db.get_subscribers(taddr)
+        for ser in subscriber_list:
+            if publish_task.has_key(ser):
+                publish_task[ser].append(tfname)
+            else:
+                publish_task[ser] = [tfname]
         with open(os.path.join(opt['tdir'], tfname), 'w') as f:
             f.write(tdata)
         db.set_downloaded(taddr, tname, md5)
 
-    return down_list
+    return publish_task
 
 # create logger
 logger = logging.getLogger('td')
@@ -144,9 +149,11 @@ while True:
     cnt += 1
     tm = time.gmtime()
     logger.debug("Run %d times, begin to download" % cnt)
-    dlist = download()
-    if len(dlist) > 0:
-        #send notificationg email when daemon mode
-        pass
+    ptask = download()
+    #publish if needed
+    if len(ptask) > 0:
+        logger.info("Publish task info %s" %ptask)
+        for subscriber in ptask:
+            publisher.publish_tordown([subscriber], ptask[subscriber])
     time.sleep(opt['time'])
 
