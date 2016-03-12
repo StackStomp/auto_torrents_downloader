@@ -51,6 +51,13 @@ def check_config(config):
             print("The rss configuration need a parser")
             print(rss)
             sys.exit(1)
+        if rss.has_key('subscriber'):
+            if type(rss['subscriber']) != list and \
+               type(rss['subscriber']) != str and \
+               type(rss['subscriber']) != unicode:
+               print("Invalid subscriber type(must be e-mail or e-mail list) %s"\
+                    % type(rss['subscriber']))
+               sys.exit(1)
     #-b
     if not config.has_key('db'):
         print("No database path specified")
