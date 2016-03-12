@@ -42,7 +42,7 @@ def download():
         if not tname:
             logger.warn("Invalid torrent data")
             continue
-    
+
         if type(feedtitle) != type(tname):
             #We convert to the same encoding, because:
             #http://jerrypeng.me/2012/03/python-unicode-format-pitfall/
@@ -53,6 +53,17 @@ def download():
         tfname ="[%s] %s.torrent" %(feedtitle, tname)
     
         md5 = hashlib.md5(tdata).hexdigest()
+    
+        if db.has_byname(tname):
+            logger.warn("New torrents exists by name, addr %s, name %s, md5 %s"\
+                        % (taddr, tname, md5))
+            db.set_downloaded(taddr, tname, md5)
+            continue
+        if db.has_bymd5(md5):
+            logger.warn("New torrents exists by md5, addr %s, name %s, md5 %s"\
+                        % (taddr, tname, md5))
+            db.set_downloaded(taddr, tname, md5)
+            continue
     
         logger.info("Torrent file has been downloaded, name %s"%tfname)
         subscriber_list = db.get_subscribers(taddr)
