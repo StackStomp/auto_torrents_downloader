@@ -1,6 +1,7 @@
 import signal
 import urllib2
 import feedparser
+import re
 
 class TotalTimeout(Exception):
     pass
@@ -9,13 +10,38 @@ def timeout_handler(signum, frame):
 signal.signal(signal.SIGALRM, timeout_handler)
 
 class RSS(object):
-    def __init__(self, url, url_timeout, download_timeout, parser, logger):
-        self.url = url
-        self.url_timeout = url_timeout
-        self.download_timeout = download_timeout
-        self.subscribers = []
-        self.p = parser
+    def __init__(self, cfg, logger):
+        self.url = cfg['address']
+        self.url_timeout = cfg['feedurl-timeout']
+        self.subscribers = cfg.get('subscribers', [])
+        self.p = __import__(cfg['parser'])
         self.logger = logger
+        self.matchers = cfg.get('filter',[])
+        for matcher in self.matchers:
+            if not matcher.has_key('key-regex'):
+                continue
+            for mre in matcher['key-regex']:
+                re.compile('mre')
+
+    def match_one(self, matcher, title):
+        for kw in matcher.get('key-words', []):
+            if kw not in title:
+                return False, []
+        matched_regex_str = []
+        for krexp in matcher.get('key-regex', []):
+            kr = re.compile(krexp)
+            s = kr.search(title)
+            if not s:
+                return False, []
+            matched_regex_str.append(s.group())
+        return True, matcher.get('key-words', []) + matched_regex_str
+
+    def match(self, title):
+        for matcher in self.matchers:
+            match_ret, match_str = self.match_one(matcher, title)
+            if match_ret:
+                return match_ret, match_str
+        return False, []
 
     def add_subscriber(self, subscriber):
         self.subscribers.append(subscriber)
@@ -48,7 +74,18 @@ class RSS(object):
             self.logger.warn("Failed to get feed data from %s" % self.url)
             return None, None
         feedtitle = self.p.get_title(feeddata)
-        tlist = self.p.get_torrents_list(feeddata)
+        taddrs = self.p.get_taddress_list(feeddata)
+        ttitles = self.p.get_ttitle_list(feeddata)
+        tlist = []
+        for i in range(0, len(taddrs)):
+            matched, kwords = self.match(ttitles[i])
+            if not matched:
+                continue
+            #TODO lookup from the db
+            #TODO record to the db with key-words if need download
+            self.logger.info("Torrent file %s, address %s need to be downloaded, key-words %s" \
+                            %(ttitles[i], taddrs[i], kwords))
+            tlist.append(taddrs[i])
         return tlist, feedtitle
         
     

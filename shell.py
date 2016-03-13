@@ -14,6 +14,10 @@ options:
 def print_help():
     print(help_info)
 
+def same_rss_cfg(c1, c2):
+    #TODO
+    return False
+
 def check_config(config):
     print config
     #-c no need to check
@@ -58,6 +62,23 @@ def check_config(config):
                print("Invalid subscriber type(must be e-mail or e-mail list) %s"\
                     % type(rss['subscriber']))
                sys.exit(1)
+        if rss.has_key('filter'):
+            for matcher in rss['filter']:
+                for kw in matcher.get('key-words', []) \
+                        + matcher.get('key-regex', []):
+                    if ';' in kw:
+                        print("The key words/regex can not contain ';'(%s)" % kw)
+                        sys.exit(1)
+        for other in config['rss']:
+            if id(rss) == id(other):
+                break
+            if same_rss_cfg(rss, other):
+                print("Same rss configuration founded")
+                print(other)
+                print(rss)
+                sys.exit(1)
+
+
     #-b
     if not config.has_key('db'):
         print("No database path specified")
@@ -104,19 +125,12 @@ def get_config():
     config['log-file'] = os.path.join(config['ctrl-dir'], 'atdownloader.log')
     config['pid-file'] = os.path.join(config['ctrl-dir'], 'atdownloader.pid')
 
+    for in range(0, len(cofig['rss']))
+        config['rss'][i]['feedurl-timeout'] = \
+            config['rss'][i].get('feedurl-timeout', config['feedurl-timeout'])
+
     check_config(config)
 
-    #remove duplicates and import 
-    new_rss = []
-    for rss in config['rss']:
-        for nr in new_rss:
-            if nr['address'] == rss['address']:
-                break
-        else:
-            rss['p'] = __import__(rss['parser'])
-            new_rss.append(rss)
-    config['rss'] = new_rss
-    
     return config
 
 if __name__ == '__main__':
