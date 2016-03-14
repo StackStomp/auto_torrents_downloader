@@ -10,12 +10,13 @@ def timeout_handler(signum, frame):
 signal.signal(signal.SIGALRM, timeout_handler)
 
 class RSS(object):
-    def __init__(self, cfg, logger):
+    def __init__(self, cfg, logger, db):
         self.url = cfg['address']
         self.url_timeout = cfg['feedurl-timeout']
         self.subscribers = cfg.get('subscribers', [])
         self.p = __import__(cfg['parser'])
         self.logger = logger
+        self.db = db
         self.matchers = cfg.get('filter',[])
         for matcher in self.matchers:
             if not matcher.has_key('key-regex'):
@@ -73,19 +74,37 @@ class RSS(object):
         if not feeddata:
             self.logger.warn("Failed to get feed data from %s" % self.url)
             return None, None
-        feedtitle = self.p.get_title(feeddata)
         taddrs = self.p.get_taddress_list(feeddata)
+        feedtitle = self.p.get_title(feeddata)
         ttitles = self.p.get_ttitle_list(feeddata)
+
+        if len(self.matchers) == 0:
+            return taddrs, feedtitle
+
         tlist = []
         for i in range(0, len(taddrs)):
             matched, kwords = self.match(ttitles[i])
             if not matched:
+                self.logger.debug("RSS torrent not matched, title %s, url %s" \
+                                 %(ttitles[i], taddrs[i]))
                 continue
-            #TODO lookup from the db
-            #TODO record to the db with key-words if need download
+
+            if self.db.binge_has_byurl(taddrs[i]):
+                self.logger.debug("RSS torrent is exists in binge-list, url %s" % taddrs[i])
+                continue
+
+            keys = ';'.join(kwords)
+            if self.db.binge_has_bykeys(keys):
+                self.logger.info("RSS torrent(title %s) won't be downloaded because the keys exists %s"\
+                    %(ttitles[i],keys))
+                self.db.add_binge(taddrs[i], ttitles[i], keys, 0)
+                continue
+
             self.logger.info("Torrent file %s, address %s need to be downloaded, key-words %s" \
-                            %(ttitles[i], taddrs[i], kwords))
+                            %(ttitles[i], taddrs[i], keys))
             tlist.append(taddrs[i])
+            self.db.add_binge(taddrs[i], ttitles[i], keys, 1)
+
         return tlist, feedtitle
         
     

@@ -125,7 +125,7 @@ def get_config():
     config['log-file'] = os.path.join(config['ctrl-dir'], 'atdownloader.log')
     config['pid-file'] = os.path.join(config['ctrl-dir'], 'atdownloader.pid')
 
-    for in range(0, len(cofig['rss']))
+    for i in range(0, len(config['rss'])):
         config['rss'][i]['feedurl-timeout'] = \
             config['rss'][i].get('feedurl-timeout', config['feedurl-timeout'])
 

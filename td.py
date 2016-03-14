@@ -12,6 +12,7 @@ import publisher
 def download():
     #read the rss, and add new torrent-addresses to db
     for rss in rsss:
+        logger.debug("Begin to read from rss %s" % rss.url)
         tlist, ttitle = rss.get_torrents_list()
         if not tlist:
             continue
@@ -133,8 +134,7 @@ if opt['flush']:
 #Init all RSS
 rsss = []
 for rss_cfg in opt['rss']:
-    rss = ptserver.RSS(rss_cfg['address'], opt['feedurl-timeout'], 
-                       opt['torurl-timeout'], rss_cfg['p'],logger)
+    rss = ptserver.RSS(rss_cfg,logger, db)
 
     if rss_cfg.has_key('subscriber'):
         if type(rss_cfg['subscriber']) == list:
