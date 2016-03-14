@@ -118,11 +118,36 @@ class DownDB(object):
         else:
             return False
 
-class LocalTorrents(UndownDB, DownDB):
+class BingeDB(object):
+    def init_binge(self):
+        sor = self.db.cursor()
+        sor.execute("CREATE TABLE IF NOT EXISTS binge \
+            (url text, title text, keys text, downloaded integer)")
+    def binge_has_byurl(self, url):
+        sor = self.db.cursor()
+        sor.execute("SELECT * FROM binge WHERE url = (?)", (url,))
+        if sor.fetchall():
+            return True
+        else:
+            return False
+    def binge_has_bykeys(self, keys):
+        sor = self.db.cursor()
+        sor.execute("SELECT * FROM binge WHERE keys = (?)", (keys,))
+        if sor.fetchall():
+            return True
+        else:
+            return False
+    def add_binge(self, url, title, keys, downloaded):
+        sor = self.db.cursor()
+        sor.execute("INSERT INTO binge (url, title, keys, downloaded) \
+            VALUES (?,?,?,%d)" % downloaded, (url, title, keys))
+
+class LocalTorrents(UndownDB, DownDB, BingeDB):
     def __init__(self, db):
         self.db = sqlite3.connect(db)
         self.init_torrents()
         self.init_undown()
+        self.init_binge()
 
     def __del__(self):
         if self.db:
