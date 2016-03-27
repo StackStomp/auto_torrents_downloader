@@ -112,24 +112,25 @@ db = local.LocalTorrents(opt['db'])
 
 #read in all torrents exists to the db
 if opt['flush']:
-    logger.info("Scan dir %s, and record torrents..." % opt['tdir'])
-    for f in os.listdir(opt['tdir']):
-        fullf = os.path.join(opt['tdir'], f)
-        if not os.path.isfile(fullf):
-            continue
-        tname = torrent.get_tname_byfname(f)
-        if not tname:
-            continue
-        if db.has_byname(tname):
-            continue
-        md5 = hashlib.md5(open(fullf,'rb').read()).hexdigest()
-        db.add_exists(tname, md5)
-#        try:
-#            tname = tname.encode('utf-8')
-#        except UnicodeDecodeError:
-#            pass
-        logger.info("Added exists torrent file %s, md5 %s" \
-                % (tname, md5))
+    for tdir in opt['tdirs']:
+        logger.info("Scan dir %s, and record torrents..." % tdir)
+        for f in os.listdir(tdir):
+            fullf = os.path.join(tdir, f)
+            if not os.path.isfile(fullf):
+                continue
+            tname = torrent.get_tname_byfname(f)
+            if not tname:
+                continue
+            if db.has_byname(tname):
+                continue
+            md5 = hashlib.md5(open(fullf,'rb').read()).hexdigest()
+            db.add_exists(tname, md5)
+#            try:
+#                tname = tname.encode('utf-8')
+#            except UnicodeDecodeError:
+#                pass
+            logger.info("Added exists torrent file %s, md5 %s" \
+                    % (tname, md5))
 
 #Init all RSS
 rsss = []

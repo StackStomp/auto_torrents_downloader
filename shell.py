@@ -38,9 +38,15 @@ def check_config(config):
         print_help()
         sys.exit(1)
     if not os.path.isdir(config['tdir']):
-        print("The torrents' directory is not exists")
+        print("The torrents' directory for download is not exists")
         print_help()
         sys.exit(1)
+    # test tdirs
+    for tdir in config['tdirs']:
+        if not os.path.isdir(tdir):
+            print("The torrents' directory %s is not exists" % tdir)
+            print_help()
+            sys.exit(1)
     #-a
     if not config.has_key('rss'):
         print("No rss feed's address found")
@@ -98,7 +104,9 @@ def get_config():
               'feedurl-timeout':30,
               'torurl-timeout':60,
               'flush':True,
-              'maxtry':10}
+              'maxtry':10,
+              'tdir':'',
+              'tdirs':[]}
     shortopts = 'p:c:d:b:'
     try:
         optlist, args = getopt.getopt(sys.argv[1:], shortopts)
@@ -128,6 +136,9 @@ def get_config():
     for i in range(0, len(config['rss'])):
         config['rss'][i]['feedurl-timeout'] = \
             config['rss'][i].get('feedurl-timeout', config['feedurl-timeout'])
+
+    if not config['tdir'] in config['tdirs']:
+        config['tdirs'].append(config['tdir'])
 
     check_config(config)
 
