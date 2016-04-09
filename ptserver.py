@@ -1,5 +1,6 @@
 import signal
 import urllib2
+import httplib
 import feedparser
 import re
 
@@ -63,6 +64,11 @@ class RSS(object):
         except urllib2.URLError, e:
             signal.alarm(0)
             self.logger.warn("Failed to open url %s because urllib2.URLError, info %s" \
+                        % (self.url, e))
+            return None
+        except httplib.IncompleteRead, e:
+            signal.alarm(0)
+            self.logger.warn("Failed to open url %s because httplib.IncompleteRead, info %s" \
                         % (self.url, e))
             return None
         signal.alarm(0)
