@@ -71,6 +71,12 @@ class RSS(object):
             self.logger.warn("Failed to open url %s because httplib.IncompleteRead, info %s" \
                         % (self.url, e))
             return None
+        except httplib.BadStatusLine, e:
+            signal.alarm(0)
+            self.logger.warn("Failed to open url %s because httplib.BadStatusLine, info %s" \
+                        % (self.url, e))
+            return None
+
         signal.alarm(0)
     
         return feedparser.parse(uc)
@@ -136,6 +142,12 @@ def download_torrent(url, timeout, logger):
         logger.warn("Failed to open url %s because httplib.IncompleteRead, info %s" \
                     % (url, e))
         return None
+    except httplib.BadStatusLine, e:
+        signal.alarm(0)
+        logger.warn("Failed to open url %s because httplib.BadStatusLine, info %s" \
+                    % (self.url, e))
+        return None
+
     signal.alarm(0)
     return uc
 
