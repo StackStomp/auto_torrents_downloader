@@ -118,7 +118,7 @@ def download_torrent(url, timeout, logger):
         u.close()
     except:
         signal.alarm(0)
-        logger.warn("Failed to open url %s because exception" % self.url)
+        logger.warn("Failed to open url %s because exception" % url)
         logger.warn(traceback.format_exc())
         return None
     signal.alarm(0)
