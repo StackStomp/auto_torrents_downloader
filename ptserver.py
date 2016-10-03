@@ -3,6 +3,9 @@ import urllib2
 import httplib
 import feedparser
 import re
+import traceback
+
+m_headers = {'User-Agent':'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'}
 
 class TotalTimeout(Exception):
     pass
@@ -54,31 +57,17 @@ class RSS(object):
             #can not use the argument timeout applied by urlopen
             #because the timeout argument is 'defaulttimeout'
             #but we need a whole-procedure-timeout
-            u = urllib2.urlopen(self.url)
+            req = urllib2.Request(self.url,headers=m_headers)
+            u = urllib2.urlopen(req)
             uc = u.read()
             u.close()
-        except TotalTimeout:
-            self.logger.warn("Failed to open url %s, timeout %d"\
-                            % (self.url, self.url_timeout))
-            return None
-        except urllib2.URLError, e:
+        except:
             signal.alarm(0)
-            self.logger.warn("Failed to open url %s because urllib2.URLError, info %s" \
-                        % (self.url, e))
+            self.logger.warn("Failed to open url %s because exception" % self.url)
+            self.logger.warn(traceback.format_exc())
             return None
-        except httplib.IncompleteRead, e:
-            signal.alarm(0)
-            self.logger.warn("Failed to open url %s because httplib.IncompleteRead, info %s" \
-                        % (self.url, e))
-            return None
-        except httplib.BadStatusLine, e:
-            signal.alarm(0)
-            self.logger.warn("Failed to open url %s because httplib.BadStatusLine, info %s" \
-                        % (self.url, e))
-            return None
-
         signal.alarm(0)
-    
+
         return feedparser.parse(uc)
 
     def get_torrents_list(self):
@@ -118,37 +107,19 @@ class RSS(object):
             self.db.add_binge(taddrs[i], ttitles[i], keys, 1)
 
         return tlist, feedtitle
-        
-    
+
+
 def download_torrent(url, timeout, logger):
     signal.alarm(timeout)
     try:
-        u = urllib2.urlopen(url)
+        req = urllib2.Request(url,headers=m_headers)
+        u = urllib2.urlopen(req)
         uc = u.read()
         u.close()
-    except IOError:
-        logger.error("Failed to download torrent from %s, invalid url" % url)
-        return None
-    except TotalTimeout:
-        logger.warn("Failed to open url %s, timeout %d" % (url, timeout))
-        return None
-    except urllib2.URLError, e:
+    except:
         signal.alarm(0)
-        logger.warn("Failed to open url %s because urllib2.URLError, info %s" \
-                    % (url, e))
+        logger.warn("Failed to open url %s because exception" % self.url)
+        logger.warn(traceback.format_exc())
         return None
-    except httplib.IncompleteRead, e:
-        signal.alarm(0)
-        logger.warn("Failed to open url %s because httplib.IncompleteRead, info %s" \
-                    % (url, e))
-        return None
-    except httplib.BadStatusLine, e:
-        signal.alarm(0)
-        logger.warn("Failed to open url %s because httplib.BadStatusLine, info %s" \
-                    % (self.url, e))
-        return None
-
     signal.alarm(0)
     return uc
-
-
