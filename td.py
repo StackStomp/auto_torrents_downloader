@@ -22,7 +22,7 @@ def download():
                 continue
             logger.info("Add new torrent to db, address %s" % taddr)
             db.add_undown(taddr, ttitle, rss.subscribers)
-    
+
     #Download torrents undownloaded
     publish_task = {}
     tlist = db.get_undown()
@@ -33,12 +33,12 @@ def download():
         if db.get_trydowntimes_byurl(taddr) >= opt['maxtry']:
             continue
         db.plustrydowntimes_byurl(taddr)
-    
+
         tdata = ptserver.download_torrent(taddr, opt['torurl-timeout'], logger)
         if not tdata:
             logger.warn("Can not get data fro address %s"%taddr)
             continue
-    
+
         tname = torrent.get_name(tdata)
         if not tname:
             logger.warn("Invalid torrent data")
@@ -52,9 +52,9 @@ def download():
             if type(tname) == str:
                 tname = tname.decode('utf-8')
         tfname ="[%s] %s.torrent" %(feedtitle, tname)
-    
+
         md5 = hashlib.md5(tdata).hexdigest()
-    
+
         if db.has_byname(tname):
             logger.warn("New torrents exists by name, addr %s, name %s, md5 %s"\
                         % (taddr, tname, md5))
@@ -65,7 +65,7 @@ def download():
                         % (taddr, tname, md5))
             db.set_downloaded(taddr, tname, md5)
             continue
-    
+
         logger.info("Torrent file has been downloaded, name %s"%tfname)
         subscriber_list = db.get_subscribers(taddr)
         for ser in subscriber_list:
@@ -106,7 +106,7 @@ if opt['daemon']:
 logger.info("Configuration:")
 for key in opt:
     logger.info("%s:%s"%(key,opt[key]))
-    
+
 #init torrents' database
 db = local.LocalTorrents(opt['db'])
 
@@ -147,14 +147,14 @@ for rss_cfg in opt['rss']:
                 %(rss_cfg['address'], opt['feedurl-timeout'],\
                 opt['torurl-timeout']))
 
-#console mode, run only on time
-if not opt['daemon']:
-    import sys
-    logger.debug("Running in console mode")
-    download()
-    sys.exit(0)
+##console mode, run only on time
+#if not opt['daemon']:
+#    import sys
+#    logger.debug("Running in console mode")
+#    download()
+#    sys.exit(0)
 
-#daemon mode, run inifitely
+#run inifitely
 cnt = 0
 while True:
     import time
@@ -168,4 +168,3 @@ while True:
         for subscriber in ptask:
             publisher.publish_tordown([subscriber], ptask[subscriber])
     time.sleep(opt['time'])
-
