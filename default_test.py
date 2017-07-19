@@ -2,8 +2,9 @@
 import sys
 import urllib2
 import feedparser
-from ptserver import m_headers
 import default
+
+m_headers = {'User-Agent':'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'}
 
 if len(sys.argv) != 2:
     print("Format: %s <rss-url>" % sys.argv[0])
