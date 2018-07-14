@@ -151,7 +151,12 @@ for rss_cfg in opt['rss']:
 if opt.has_key('proxy'):
     proxy_cfg = opt['proxy']
     import urllib2
-    proxy_handler = urllib2.ProxyHandler({proxy_cfg['type']: proxy_cfg['host']})
+    logger.info("Using %s proxy, host %s" % (proxy_cfg['type'], proxy_cfg['host']))
+    proxy_handler = urllib2.ProxyHandler(
+        {
+            'http': proxy_cfg['host'],
+            'https': proxy_cfg['host']
+        })
     urllib2.install_opener(urllib2.build_opener(proxy_handler))
 
 ##console mode, run only on time

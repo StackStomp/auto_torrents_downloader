@@ -91,7 +91,7 @@ def check_config(config):
     #proxy
     if config.has_key('proxy'):
         if not config['proxy'].has_key('type'):
-            config['proxy'] = 'http'
+            config['proxy']['type'] = 'http'
         if not config['proxy'].has_key('host'):
             print("There is no 'host' in proxy")
             sys.exit(1)

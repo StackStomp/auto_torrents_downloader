@@ -1,6 +1,5 @@
 import signal
 import urllib2
-import httplib
 import feedparser
 import re
 import traceback
