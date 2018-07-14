@@ -147,6 +147,13 @@ for rss_cfg in opt['rss']:
                 %(rss_cfg['address'], opt['feedurl-timeout'],\
                 opt['torurl-timeout']))
 
+#Init the proxy
+if opt.has_key('proxy'):
+    proxy_cfg = opt['proxy']
+    import urllib2
+    proxy_handler = urllib2.ProxyHandler({proxy_cfg['type']: proxy_cfg['host']})
+    urllib2.install_opener(urllib2.build_opener(proxy_handler))
+
 ##console mode, run only on time
 #if not opt['daemon']:
 #    import sys

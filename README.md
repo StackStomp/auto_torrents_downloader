@@ -69,4 +69,7 @@ python default_test.py http://xxxx
 ```
 查看打印的解析信息是否正确，若正确，则说明可以使用default解析  
 
+### 使用前需要安装的包：
+* feedparser
+* bencode
 

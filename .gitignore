@@ -2,7 +2,7 @@
 *.db
 *.torrent
 *.swp
-*.json
+cfg.json
 *_test.py
 test.json
 .idea

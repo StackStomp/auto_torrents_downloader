@@ -57,7 +57,7 @@ class RSS(object):
             #can not use the argument timeout applied by urlopen
             #because the timeout argument is 'defaulttimeout'
             #but we need a whole-procedure-timeout
-            req = urllib2.Request(self.url,headers=m_headers)
+            req = urllib2.Request(self.url, headers=m_headers)
             u = urllib2.urlopen(req)
             uc = u.read()
             u.close()

@@ -83,13 +83,18 @@ def check_config(config):
                 print(other)
                 print(rss)
                 sys.exit(1)
-
-
     #-b
     if not config.has_key('db'):
         print("No database path specified")
         print_help()
         sys.exit(1)
+    #proxy
+    if config.has_key('proxy'):
+        if not config['proxy'].has_key('type'):
+            config['proxy'] = 'http'
+        if not config['proxy'].has_key('host'):
+            print("There is no 'host' in proxy")
+            sys.exit(1)
 
 def get_config_fromjson(config, fdir):
     import json

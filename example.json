@@ -3,9 +3,13 @@
     "tdir":"",
     "tdirs":[],
     "ctrl-dir":"",
+    "proxy": {
+        "type": "http",
+        "host": "192.168.1.1:6213"
+    },
     "rss":[
     {   
-        "address": ""
+        "address": "",
         "parser": "ttg",
         "subscribers": [], 
         "filter":[
@@ -18,11 +22,11 @@
             "key-regex": ["S06E\\d+"]
         }   
         ]   
-    },  
-    {   
-        "address": "", 
+    },
+    {
+        "address": "",
         "parser": "opencd",
         "subscriber": "sntitan@qq.com"
-    }   
+    }
     ]   
 }
