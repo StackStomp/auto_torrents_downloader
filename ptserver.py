@@ -3,6 +3,7 @@ import urllib2
 import feedparser
 import re
 import traceback
+import logging
 
 m_headers = {'User-Agent':'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'}
 
@@ -13,12 +14,11 @@ def timeout_handler(signum, frame):
 signal.signal(signal.SIGALRM, timeout_handler)
 
 class RSS(object):
-    def __init__(self, cfg, logger, db):
+    def __init__(self, cfg, db):
         self.url = cfg['address']
         self.url_timeout = cfg['feedurl-timeout']
         self.subscribers = cfg.get('subscribers', [])
         self.p = __import__(cfg['parser'])
-        self.logger = logger
         self.db = db
         self.matchers = cfg.get('filter',[])
         for matcher in self.matchers:
@@ -62,8 +62,8 @@ class RSS(object):
             u.close()
         except:
             signal.alarm(0)
-            self.logger.warn("Failed to open url %s because exception" % self.url)
-            self.logger.warn(traceback.format_exc())
+            logging.warn("Failed to open url %s because exception" % self.url)
+            logging.warn(traceback.format_exc())
             return None
         signal.alarm(0)
 
@@ -72,7 +72,7 @@ class RSS(object):
     def get_torrents_list(self):
         feeddata = self.get_feed_data()
         if not feeddata:
-            self.logger.warn("Failed to get feed data from %s" % self.url)
+            logging.warn("Failed to get feed data from %s" % self.url)
             return None, None
         taddrs = self.p.get_taddress_list(feeddata)
         feedtitle = self.p.get_title(feeddata)
@@ -85,22 +85,22 @@ class RSS(object):
         for i in range(0, len(taddrs)):
             matched, kwords = self.match(ttitles[i])
             if not matched:
-                self.logger.debug("RSS torrent not matched, title %s, url %s" \
+                logging.debug("RSS torrent not matched, title %s, url %s" \
                                  %(ttitles[i], taddrs[i]))
                 continue
 
             if self.db.binge_has_byurl(taddrs[i]):
-                self.logger.debug("RSS torrent is exists in binge-list, url %s" % taddrs[i])
+                logging.debug("RSS torrent is exists in binge-list, url %s" % taddrs[i])
                 continue
 
             keys = ';'.join(kwords)
             if self.db.binge_has_bykeys(keys):
-                self.logger.info("RSS torrent(title %s) won't be downloaded because the keys exists %s"\
+                logging.info("RSS torrent(title %s) won't be downloaded because the keys exists %s"\
                     %(ttitles[i],keys))
                 self.db.add_binge(taddrs[i], ttitles[i], keys, 0)
                 continue
 
-            self.logger.info("Torrent file %s, address %s need to be downloaded, key-words %s" \
+            logging.info("Torrent file %s, address %s need to be downloaded, key-words %s" \
                             %(ttitles[i], taddrs[i], keys))
             tlist.append(taddrs[i])
             self.db.add_binge(taddrs[i], ttitles[i], keys, 1)
@@ -108,7 +108,7 @@ class RSS(object):
         return tlist, feedtitle
 
 
-def download_torrent(url, timeout, logger):
+def download_torrent(url, timeout):
     signal.alarm(timeout)
     try:
         req = urllib2.Request(url,headers=m_headers)
@@ -117,8 +117,8 @@ def download_torrent(url, timeout, logger):
         u.close()
     except:
         signal.alarm(0)
-        logger.warn("Failed to open url %s because exception" % url)
-        logger.warn(traceback.format_exc())
+        logging.warn("Failed to open url %s because exception" % url)
+        logging.warn(traceback.format_exc())
         return None
     signal.alarm(0)
     return uc

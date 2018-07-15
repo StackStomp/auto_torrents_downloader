@@ -1,4 +1,4 @@
-#!/usr/bin/python
+# !/usr/bin/python
 import os
 import shell
 import local
@@ -12,15 +12,15 @@ import publisher
 def download():
     #read the rss, and add new torrent-addresses to db
     for rss in rsss:
-        logger.debug("Begin to read from rss %s" % rss.url)
+        logging.debug("Begin to read from rss %s" % rss.url)
         tlist, ttitle = rss.get_torrents_list()
         if not tlist:
             continue
         for taddr in tlist:
             if db.has_byurl(taddr):
-                logger.debug("New torrent exists, address %s" % taddr)
+                logging.debug("New torrent exists, address %s" % taddr)
                 continue
-            logger.info("Add new torrent to db, address %s" % taddr)
+            logging.info("Add new torrent to db, address %s" % taddr)
             db.add_undown(taddr, ttitle, rss.subscribers)
 
     #Download torrents undownloaded
@@ -29,19 +29,19 @@ def download():
     for tor in tlist:
         taddr = tor['url']
         feedtitle = tor['title']
-        logger.info("Begin to download torrent from %s"% taddr)
+        logging.info("Begin to download torrent from %s"% taddr)
         if db.get_trydowntimes_byurl(taddr) >= opt['maxtry']:
             continue
         db.plustrydowntimes_byurl(taddr)
 
-        tdata = ptserver.download_torrent(taddr, opt['torurl-timeout'], logger)
+        tdata = ptserver.download_torrent(taddr, opt['torurl-timeout'])
         if not tdata:
-            logger.warn("Can not get data fro address %s"%taddr)
+            logging.warn("Can not get data fro address %s"%taddr)
             continue
 
         tname = torrent.get_name(tdata)
         if not tname:
-            logger.warn("Invalid torrent data")
+            logging.warn("Invalid torrent data")
             continue
 
         if type(feedtitle) != type(tname):
@@ -56,17 +56,17 @@ def download():
         md5 = hashlib.md5(tdata).hexdigest()
 
         if db.has_byname(tname):
-            logger.warn("New torrents exists by name, addr %s, name %s, md5 %s"\
+            logging.warn("New torrents exists by name, addr %s, name %s, md5 %s"\
                         % (taddr, tname, md5))
             db.set_downloaded(taddr, tname, md5)
             continue
         if db.has_bymd5(md5):
-            logger.warn("New torrents exists by md5, addr %s, name %s, md5 %s"\
+            logging.warn("New torrents exists by md5, addr %s, name %s, md5 %s"\
                         % (taddr, tname, md5))
             db.set_downloaded(taddr, tname, md5)
             continue
 
-        logger.info("Torrent file has been downloaded, name %s"%tfname)
+        logging.info("Torrent file has been downloaded, name %s"%tfname)
         subscriber_list = db.get_subscribers(taddr)
         for ser in subscriber_list:
             if publish_task.has_key(ser):
@@ -79,41 +79,40 @@ def download():
 
     return publish_task
 
-# create logger
-logger = logging.getLogger('td')
-logger.setLevel(logging.DEBUG)
 
-# create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Init the level of the root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
 
-# create console handler and set level to debug
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(formatter)
-logger.addHandler(ch)
-
-# 'application' code
-logger.debug('logger ok')
-
-#get config
+# get config
 opt = shell.get_config()
 
-#daemon operation
 if opt['daemon']:
     daemon.daemon_exec(opt)
 
-#print configuration
-logger.info("Configuration:")
-for key in opt:
-    logger.info("%s:%s"%(key,opt[key]))
+    # redirect logs to the log file in the daemon mode
+    from logging.handlers import RotatingFileHandler
+    ch = RotatingFileHandler(opt['log-file'], maxBytes=20*1024*1024, backupCount=10)
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
 
-#init torrents' database
+    root_logger.handlers = []
+    root_logger.addHandler(ch)
+    root_logger.debug("The logger has been initialized")
+
+# print configuration
+logging.info("Configuration:")
+for key in opt:
+    logging.info("%s:%s"%(key,opt[key]))
+
+# init torrents' database
 db = local.LocalTorrents(opt['db'])
 
-#read in all torrents exists to the db
+# read in all torrents exists to the db
 if opt['flush']:
     for tdir in opt['tdirs']:
-        logger.info("Scan dir %s, and record torrents..." % tdir)
+        logging.info("Scan dir %s, and record torrents..." % tdir)
         for f in os.listdir(tdir):
             fullf = os.path.join(tdir, f)
             if not os.path.isfile(fullf):
@@ -125,17 +124,13 @@ if opt['flush']:
                 continue
             md5 = hashlib.md5(open(fullf,'rb').read()).hexdigest()
             db.add_exists(tname, md5)
-#            try:
-#                tname = tname.encode('utf-8')
-#            except UnicodeDecodeError:
-#                pass
-            logger.info("Added exists torrent file %s, md5 %s" \
-                    % (tname, md5))
 
-#Init all RSS
+            logging.info("Added exists torrent file %s, md5 %s" % (tname, md5))
+
+# Init all RSS
 rsss = []
 for rss_cfg in opt['rss']:
-    rss = ptserver.RSS(rss_cfg,logger, db)
+    rss = ptserver.RSS(rss_cfg, db)
 
     if rss_cfg.has_key('subscriber'):
         if type(rss_cfg['subscriber']) == list:
@@ -143,15 +138,14 @@ for rss_cfg in opt['rss']:
         else:
             rss.add_subscriber(rss_cfg['subscriber'])
     rsss.append(rss)
-    logger.info("Read in rss-feed config, addr %s, timeout %d/%d"\
-                %(rss_cfg['address'], opt['feedurl-timeout'],\
-                opt['torurl-timeout']))
+    logging.info("Read in rss-feed config, addr %s, timeout %d/%d"\
+                %(rss_cfg['address'], opt['feedurl-timeout'], opt['torurl-timeout']))
 
-#Init the proxy
+# Init the proxy
 if opt.has_key('proxy'):
     proxy_cfg = opt['proxy']
     import urllib2
-    logger.info("Using %s proxy, host %s" % (proxy_cfg['type'], proxy_cfg['host']))
+    logging.info("Using %s proxy, host %s" % (proxy_cfg['type'], proxy_cfg['host']))
     proxy_handler = urllib2.ProxyHandler(
         {
             'http': proxy_cfg['host'],
@@ -159,24 +153,24 @@ if opt.has_key('proxy'):
         })
     urllib2.install_opener(urllib2.build_opener(proxy_handler))
 
-##console mode, run only on time
-#if not opt['daemon']:
-#    import sys
-#    logger.debug("Running in console mode")
-#    download()
-#    sys.exit(0)
+# #console mode, run only on time
+# if not opt['daemon']:
+# import sys
+# logging.debug("Running in console mode")
+# download()
+# sys.exit(0)
 
-#run inifitely
+# run inifitely
 cnt = 0
 while True:
     import time
     cnt += 1
     tm = time.gmtime()
-    logger.debug("Run %d times, begin to download" % cnt)
+    logging.debug("Run %d times, begin to download" % cnt)
     ptask = download()
     #publish if needed
     if len(ptask) > 0:
-        logger.info("Publish task info %s" %ptask)
+        logging.info("Publish task info %s" %ptask)
         for subscriber in ptask:
             publisher.publish_tordown([subscriber], ptask[subscriber])
     time.sleep(opt['time'])

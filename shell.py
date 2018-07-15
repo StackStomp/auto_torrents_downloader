@@ -1,6 +1,7 @@
 import os
 import sys
 import getopt
+import logging
 
 help_info = '''
 atd OPTIONS...
@@ -124,6 +125,7 @@ def get_config():
         if key == '-p':
             config['tdir'] = os.path.abspath(value)
         elif key == '-c':
+            logging.debug("Begin to read from file {}".format(value))
             config = get_config_fromjson(config, value)
         elif key == '-d':
             config['daemon'] = value
