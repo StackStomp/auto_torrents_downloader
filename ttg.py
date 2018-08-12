@@ -12,7 +12,7 @@ def get_torrents_list(up, key):
 def get_taddress_list(up):
     return get_torrents_list(up, 'link')
 
-def get_ttitle_list(up):
+def get_title_list(up):
     return get_torrents_list(up, 'title')
 
 def get_title(up):

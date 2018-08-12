@@ -76,7 +76,7 @@ class RSS(object):
             return None, None
         taddrs = self.p.get_taddress_list(feeddata)
         feedtitle = self.p.get_title(feeddata)
-        ttitles = self.p.get_ttitle_list(feeddata)
+        ttitles = self.p.get_title_list(feeddata)
 
         if len(self.matchers) == 0:
             return taddrs, feedtitle

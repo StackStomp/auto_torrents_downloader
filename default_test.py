@@ -2,15 +2,24 @@
 import sys
 import urllib2
 import feedparser
-import default
+
 
 m_headers = {'User-Agent':'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'}
 
-if len(sys.argv) != 2:
-    print("Format: %s <rss-url>" % sys.argv[0])
+
+if len(sys.argv) == 2:
+    url = sys.argv[1]
+    parser_name = "default"
+elif len(sys.argv) == 3:
+    parser_name = sys.argv[1]
+    url = sys.argv[2]
+else:
+    print("Format: %s [parser-name] <rss-url>" % sys.argv[0])
     sys.exit(1)
 
-url = sys.argv[1]
+
+parser = __import__(parser_name)
+
 
 req = urllib2.Request(url,headers=m_headers)
 u = urllib2.urlopen(req)
@@ -19,9 +28,12 @@ u.close()
 
 up = feedparser.parse(uc)
 print("The default analyse result:")
-print 'Title:', default.get_title(up)
-addrs = default.get_taddress_list(up)
-titles = default.get_ttitle_list(up)
+print 'Title:', parser.get_title(up)
+addrs = parser.get_taddress_list(up)
+titles = parser.get_title_list(up)
+
+print addrs
+print titles
 
 if len(addrs) == 0 and len(titles) == 0:
     print("Can not pick torrent's name or address out from url %s" % url)
