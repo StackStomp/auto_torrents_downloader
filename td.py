@@ -29,9 +29,10 @@ def download():
     for tor in tlist:
         taddr = tor['url']
         feedtitle = tor['title']
-        logging.info("Begin to download torrent from %s"% taddr)
         if db.get_trydowntimes_byurl(taddr) >= opt['maxtry']:
+            logging.debug("The retry-download-times of torrent %s, addr %s exceeds the max retry limit %d, skip it" % (feedtitle, taddr, opt['maxtry']))
             continue
+        logging.info("Begin to download torrent from %s"% taddr)
         db.plustrydowntimes_byurl(taddr)
 
         tdata = ptserver.download_torrent(taddr, opt['torurl-timeout'])
