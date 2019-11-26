@@ -1,9 +1,10 @@
 import signal
-import urllib2
 import feedparser
 import re
 import traceback
 import logging
+import socket
+import requests
 
 m_headers = {'User-Agent':'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11'}
 
@@ -12,6 +13,37 @@ class TotalTimeout(Exception):
 def timeout_handler(signum, frame):
     raise TotalTimeout("time out")
 signal.signal(signal.SIGALRM, timeout_handler)
+
+
+try:
+    from http.client import HTTPConnection
+except ImportError:
+    from httplib import HTTPConnection
+
+
+class Ipv4HTTPConnection(HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_INET)
+        self.sock.connect((self.host, self.port, 0, 0))
+        if self._tunnel_host:
+            self._tunnel()
+
+
+def read_url(url, timeout, protocol='ipv4'):
+    if protocol == 'ipv4':
+        requests.packages.urllib3.connectionpool.HTTPConnection = Ipv4HTTPConnection
+
+    try:
+        resp = requests.get(url, timeout=(max(timeout / 100, 10), timeout))
+        if resp.status_code == 200:
+            return resp.content
+        else:
+            return None
+    except requests.exceptions.RequestException:
+        logging.warn("Failed to open url {} because exception".format(url))
+        logging.warn(traceback.format_exc())
+        return None
+
 
 class RSS(object):
     def __init__(self, cfg, db):
@@ -51,21 +83,9 @@ class RSS(object):
         self.subscribers.append(subscriber)
 
     def get_feed_data(self):
-        signal.alarm(self.url_timeout)
-        try:
-            #can not use the argument timeout applied by urlopen
-            #because the timeout argument is 'defaulttimeout'
-            #but we need a whole-procedure-timeout
-            req = urllib2.Request(self.url, headers=m_headers)
-            u = urllib2.urlopen(req)
-            uc = u.read()
-            u.close()
-        except:
-            signal.alarm(0)
-            logging.warn("Failed to open url %s because exception" % self.url)
-            logging.warn(traceback.format_exc())
+        uc = read_url(self.url, self.url_timeout)
+        if uc is None:
             return None
-        signal.alarm(0)
 
         return feedparser.parse(uc)
 
@@ -109,16 +129,4 @@ class RSS(object):
 
 
 def download_torrent(url, timeout):
-    signal.alarm(timeout)
-    try:
-        req = urllib2.Request(url,headers=m_headers)
-        u = urllib2.urlopen(req)
-        uc = u.read()
-        u.close()
-    except:
-        signal.alarm(0)
-        logging.warn("Failed to open url %s because exception" % url)
-        logging.warn(traceback.format_exc())
-        return None
-    signal.alarm(0)
-    return uc
+    return read_url(url, timeout)
