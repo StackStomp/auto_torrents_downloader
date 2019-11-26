@@ -40,8 +40,8 @@ def read_url(url, timeout, protocol='ipv4'):
         else:
             return None
     except requests.exceptions.RequestException:
-        logging.warn("Failed to open url {} because exception".format(url))
-        logging.warn(traceback.format_exc())
+        logging.warning("Failed to open url {} because exception".format(url))
+        logging.warning(traceback.format_exc())
         return None
 
 
@@ -54,7 +54,7 @@ class RSS(object):
         self.db = db
         self.matchers = cfg.get('filter',[])
         for matcher in self.matchers:
-            if not matcher.has_key('key-regex'):
+            if 'key-regex' not in matcher:
                 continue
             for mre in matcher['key-regex']:
                 re.compile('mre')
@@ -92,7 +92,7 @@ class RSS(object):
     def get_torrents_list(self):
         feeddata = self.get_feed_data()
         if not feeddata:
-            logging.warn("Failed to get feed data from %s" % self.url)
+            logging.warning("Failed to get feed data from %s" % self.url)
             return None, None
         taddrs = self.p.get_taddress_list(feeddata)
         feedtitle = self.p.get_title(feeddata)

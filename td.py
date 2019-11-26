@@ -37,32 +37,24 @@ def download():
 
         tdata = ptserver.download_torrent(taddr, opt['torurl-timeout'])
         if not tdata:
-            logging.warn("Can not get data fro address %s"%taddr)
+            logging.warning("Can not get data fro address %s"%taddr)
             continue
 
         tname = torrent.get_name(tdata)
         if not tname:
-            logging.warn("Invalid torrent data")
+            logging.warning("Invalid torrent data")
             continue
-
-        if type(feedtitle) != type(tname):
-            #We convert to the same encoding, because:
-            #http://jerrypeng.me/2012/03/python-unicode-format-pitfall/
-            if type(feedtitle) == str:
-                feedtitle = feedtitle.decode('utf-8')
-            if type(tname) == str:
-                tname = tname.decode('utf-8')
         tfname ="[%s] %s.torrent" %(feedtitle, tname)
 
         md5 = hashlib.md5(tdata).hexdigest()
 
         if db.has_byname(tname):
-            logging.warn("New torrents exists by name, addr %s, name %s, md5 %s"\
+            logging.warning("New torrents exists by name, addr %s, name %s, md5 %s"\
                         % (taddr, tname, md5))
             db.set_downloaded(taddr, tname, md5)
             continue
         if db.has_bymd5(md5):
-            logging.warn("New torrents exists by md5, addr %s, name %s, md5 %s"\
+            logging.warning("New torrents exists by md5, addr %s, name %s, md5 %s"\
                         % (taddr, tname, md5))
             db.set_downloaded(taddr, tname, md5)
             continue
@@ -70,11 +62,11 @@ def download():
         logging.info("Torrent file has been downloaded, name %s"%tfname)
         subscriber_list = db.get_subscribers(taddr)
         for ser in subscriber_list:
-            if publish_task.has_key(ser):
+            if ser in publish_task:
                 publish_task[ser].append(tfname)
             else:
                 publish_task[ser] = [tfname]
-        with open(os.path.join(opt['tdir'], tfname), 'w') as f:
+        with open(os.path.join(opt['tdir'], tfname), 'wb') as f:
             f.write(tdata)
         db.set_downloaded(taddr, tname, md5)
 
@@ -133,7 +125,7 @@ rsss = []
 for rss_cfg in opt['rss']:
     rss = ptserver.RSS(rss_cfg, db)
 
-    if rss_cfg.has_key('subscriber'):
+    if 'subscriber' in rss_cfg:
         if type(rss_cfg['subscriber']) == list:
             rss.subscribers = rss_cfg['subscriber']
         else:
@@ -141,18 +133,6 @@ for rss_cfg in opt['rss']:
     rsss.append(rss)
     logging.info("Read in rss-feed config, addr %s, timeout %d/%d"\
                 %(rss_cfg['address'], opt['feedurl-timeout'], opt['torurl-timeout']))
-
-# Init the proxy
-if opt.has_key('proxy'):
-    proxy_cfg = opt['proxy']
-    import urllib2
-    logging.info("Using %s proxy, host %s" % (proxy_cfg['type'], proxy_cfg['host']))
-    proxy_handler = urllib2.ProxyHandler(
-        {
-            'http': proxy_cfg['host'],
-            'https': proxy_cfg['host']
-        })
-    urllib2.install_opener(urllib2.build_opener(proxy_handler))
 
 # #console mode, run only on time
 # if not opt['daemon']:

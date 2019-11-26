@@ -20,7 +20,7 @@ def same_rss_cfg(c1, c2):
     return False
 
 def check_config(config):
-    print config
+    print(config)
     #-c no need to check
     #-d
     if config['daemon']:
@@ -34,7 +34,7 @@ def check_config(config):
                 print("The pid file is not exists")
                 print_help()
     #-p
-    if not config.has_key('tdir'):
+    if 'tdir' not in config:
         print("Need torrents' directory")
         print_help()
         sys.exit(1)
@@ -49,27 +49,26 @@ def check_config(config):
             print_help()
             sys.exit(1)
     #-a
-    if not config.has_key('rss'):
+    if 'rss' not in config:
         print("No rss feed's address found")
         print_help()
         sys.exit(1)
     for rss in config['rss']:
-        if not rss.has_key('address'):
+        if 'address' not in rss:
             print("The rss configuration need an address")
             print(rss)
             sys.exit(1)
-        if not rss.has_key('parser'):
+        if 'parser' not in rss:
             print("The rss configuration need a parser")
             print(rss)
             sys.exit(1)
-        if rss.has_key('subscriber'):
+        if 'subscriber' in rss:
             if type(rss['subscriber']) != list and \
-               type(rss['subscriber']) != str and \
-               type(rss['subscriber']) != unicode:
+               type(rss['subscriber']) != str:
                print("Invalid subscriber type(must be e-mail or e-mail list) %s"\
                     % type(rss['subscriber']))
                sys.exit(1)
-        if rss.has_key('filter'):
+        if 'filter' in rss:
             for matcher in rss['filter']:
                 for kw in matcher.get('key-words', []) \
                         + matcher.get('key-regex', []):
@@ -85,15 +84,15 @@ def check_config(config):
                 print(rss)
                 sys.exit(1)
     #-b
-    if not config.has_key('db'):
+    if 'db' not in config:
         print("No database path specified")
         print_help()
         sys.exit(1)
     #proxy
-    if config.has_key('proxy'):
-        if not config['proxy'].has_key('type'):
+    if 'proxy' in config:
+        if 'type' not in config['proxy']:
             config['proxy']['type'] = 'http'
-        if not config['proxy'].has_key('host'):
+        if 'host' not in config['proxy']:
             print("There is no 'host' in proxy")
             sys.exit(1)
 
@@ -132,7 +131,7 @@ def get_config():
         elif key =='-b':
             config['db'] = os.path.abspath(value)
 
-    if not config.has_key('ctrl-dir'):
+    if 'ctrl-dir' not in config:
         print("No ctrl-dir specified")
         sys.exit(1)
 

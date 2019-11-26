@@ -28,12 +28,12 @@ u.close()
 
 up = feedparser.parse(uc)
 print("The default analyse result:")
-print 'Title:', parser.get_title(up)
+print('Title:', parser.get_title(up))
 addrs = parser.get_taddress_list(up)
 titles = parser.get_title_list(up)
 
-print addrs
-print titles
+print(addrs)
+print(titles)
 
 if len(addrs) == 0 and len(titles) == 0:
     print("Can not pick torrent's name or address out from url %s" % url)
@@ -43,9 +43,9 @@ if len(addrs) == 0 and len(titles) == 0:
 
 if len(addrs) != len(titles):
     print("Failed to analyse by default-analyser")
-    print "Titles(%d):", (len(titles), titles)
-    print "Addresses(%d)", (len(addrs), addrs)
+    print("Titles(%d):", (len(titles), titles))
+    print("Addresses(%d)", (len(addrs), addrs))
     sys.exit(0)
 
 for i in range(0, len(titles)):
-    print "Name: %s; Address: %s" % (titles[i], addrs[i])
+    print("Name: %s; Address: %s" % (titles[i], addrs[i]))

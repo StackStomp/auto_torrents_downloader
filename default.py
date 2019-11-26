@@ -6,15 +6,13 @@ def get_taddress_list(up):
 				l.append(link.get('href',''))
 	return l
 
+
 def get_title_list(up):
 	l = []
 	for entry in up.get('entries', []):
 		l.append(entry.get('title', ''))
 	return l
 
+
 def get_title(up):
-    if not up.has_key('feed'):
-        return None
-    if not up['feed'].has_key('title'):
-        return None
-    return up['feed']['title']
+	return up.get('feed', {}).get('title', None)

@@ -1,13 +1,19 @@
 import os
-import bencode
+import torrent_parser as tp
 import re
+import logging
+import traceback
+
 
 def get_name(tdata):
     try:
-        b = bencode.bdecode(tdata)
-    except bencode.BTL.BTFailure:
+        b = tp.decode(tdata)
+        return b['info']['name']
+    except Exception:
+        logging.warning("Failed to decode torrent")
+        logging.warning(traceback.format_exc())
         return None
-    return b['info']['name']
+
 
 hre = re.compile(r'\[\w+\]\s?(?P<tname>[\s\S]+)')
 def get_tname_byfname(file_name, heads=[]):
@@ -34,7 +40,7 @@ if __name__ == '__main__':
     with open('test.torrent','rb') as f:
         name = get_name(f.read())
     assert len(name) > 0
-    print name
+    print(name)
 
     tname = get_tname_byfname('hello.torrent')
     assert tname == 'hello'
