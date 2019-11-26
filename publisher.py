@@ -17,7 +17,7 @@ to the disk event.'''
     title = '%d个种子已经开始下载[不要回复]' % len(tlist)
     content = '开始下载的种子文件为：\n'
     for t in tlist:
-        content += t.encode('utf-8')
+        content += t
         content += '\n'
     content += '\n此邮件为自动发送，请不要回复'
 
