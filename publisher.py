@@ -22,6 +22,6 @@ to the disk event.'''
     content += '\n此邮件为自动发送，请不要回复'
 
     for mail in mails:
-        publish_event(mail.encode('utf-8'), title, content)
+        publish_event(mail, title, content)
 
 
